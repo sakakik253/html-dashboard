@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTMLファイル管理ダッシュボード</title>
+    <style>
+        /* リセットとベース設定 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Meiryo UI', sans-serif;
+        }
+
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        /* レイアウト構造 */
+        #sidebar {
+            width: 250px;
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            transition: all 0.3s;
+        }
+
+        #main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #header {
+            background-color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        #content-area {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        #files-area {
+            flex: 2;
+            padding: 20px;
+            overflow-y: auto;
+            height: calc(100vh - 80px); /* ヘッダーの高さを引いた値 */
+        }
+
+        #preview-area {
+            flex: 3;
+            padding: 20px;
+            background-color: white;
+            border-left: 1px solid #eee;
+            overflow-y: auto;
+            height: calc(100vh - 80px); /* ヘッダーの高さを引いた値 */
+        }
+
+        /* ヘッダーコンポーネント */
+        .search-box {
+            display: flex;
+            max-width: 400px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+        }
+
+        .search-box button {
+            padding: 8px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+        }
+
+        .view-switcher {
+            display: flex;
+            margin-left: 20px;
+        }
+
+        .view-switcher button {
+            padding: 8px 12px;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+
+        .view-switcher button.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .upload-area {
+            border: 2px dashed #3498db;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: rgba(52, 152, 219, 0.05);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover, .upload-area.drag-over {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+
+        .upload-area p {
+            margin: 10px 0;
+            color: #666;
+        }
+
+        .upload-btn {
+            display: inline-block;
+            padding: 8px 15px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* サイドバーコンポーネント */
+        .sidebar-section {
+            margin-bottom: 30px;
+        }
+
+        .sidebar-title {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #ecf0f1;
+            border-bottom: 1px solid #34495e;
+            padding-bottom: 5px;
+        }
+
+        .category-list, .tag-cloud {
+            list-style-type: none;
+        }
+
+        .category-list li {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .category-list li span {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .category-list li span:hover {
+            text-decoration: underline;
+        }
+
+        .category-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            display: inline-block;
+        }
+
+        .category-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .category-action-btn {
+            background: none;
+            border: none;
+            color: #ecf0f1;
+            cursor: pointer;
+            font-size: 14px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .category-action-btn:hover {
+            opacity: 1;
+        }
+
+        .tag-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag-cloud li {
+            background-color: #34495e;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tag-cloud li:hover {
+            background-color: #3498db;
+        }
+
+        /* ファイル一覧表示 */
+        .files-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .files-header h2 {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .file-counter {
+            color: #666;
+        }
+
+        .active-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .filter-tag {
+            display: inline-flex;
+            align-items: center;
+            background-color: #f1f1f1;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+
+        .filter-tag button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin-left: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* リスト表示 */
+        .files-list {
+            list-style-type: none;
+        }
+
+        .file-item {
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            margin-bottom: 10px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .file-item:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .file-item a {
+            display: flex;
+            padding: 15px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .file-icon {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            margin-right: 15px;
+            background-color: #f1f1f1;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .file-details {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .file-meta {
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .file-date {
+            display: flex;
+            align-items: center;
+        }
+
+        .file-tags {
+            display: flex;
+            gap: 5px;
+        }
+
+        .file-tag {
+            background-color: #f1f1f1;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        /* グリッド表示 */
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            list-style-type: none;
+        }
+
+        .grid-item {
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            overflow: hidden;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            height: 180px;
+        }
+
+        .grid-item:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .grid-item a {
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            text-decoration: none;
+            color: inherit;
+            flex: 1;
+        }
+
+        .grid-icon {
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 10px;
+            background-color: #f1f1f1;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .grid-details {
+            text-align: center;
+        }
+
+        .grid-name {
+            font-weight: 500;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .grid-meta {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .grid-category {
+            margin-bottom: 5px;
+        }
+
+        .grid-tags {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        /* プレビューエリア */
+        .preview-header {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .preview-header button {
+            padding: 5px 10px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .preview-content {
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 15px;
+            min-height: 200px;
+            cursor: pointer;
+        }
+
+        .preview-content.has-preview {
+            position: relative;
+        }
+
+        .preview-content.has-preview::after {
+            content: "ダブルクリックで全画面表示";
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .preview-content.has-preview:hover::after {
+            opacity: 1;
+        }
+
+        .no-preview {
+            display: flex;
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-style: italic;
+        }
+        
+        /* モーダル/ダイアログ */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .modal-header h3 {
+            font-size: 18px;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            color: #999;
+        }
+        
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        
+        .modal-body .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .modal-body label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .modal-body input[type="text"],
+        .modal-body select,
+        .modal-body textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .modal-body textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .tag-input-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 40px;
+        }
+        
+        .tag-badge {
+            display: inline-flex;
+            align-items: center;
+            background-color: #f1f1f1;
+            padding: 2px 8px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+        
+        .tag-badge button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin-left: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .tag-input {
+            flex: 1;
+            min-width: 60px;
+            border: none;
+            padding: 5px;
+            outline: none;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .modal-footer button {
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .btn-cancel {
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            color: #333;
+        }
+        
+        .btn-save {
+            background-color: #3498db;
+            border: none;
+            color: white;
+        }
+
+        /* 確認モーダル */
+        .confirm-modal .modal-content {
+            max-width: 400px;
+        }
+
+        .confirm-modal .modal-body {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .confirm-modal .modal-footer {
+            justify-content: center;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            border: none;
+            color: white;
+        }
+        
+        /* アクションボタン */
+        .action-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #3498db;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            z-index: 50;
+        }
+        
+        /* ファイル削除ボタン */
+        .delete-file-btn {
+            color: #e74c3c;
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 14px;
+        }
+        
+        /* カテゴリー色選択 */
+        .color-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        
+        .color-option {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .color-option.selected {
+            border-color: #333;
+        }
+        
+        /* レスポンシブデザイン */
+        @media (max-width: 992px) {
+            #sidebar {
+                width: 200px;
+            }
+            
+            #preview-area {
+                flex: 2;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            
+            #sidebar {
+                width: 100%;
+                max-height: 200px;
+            }
+            
+            #content-area {
+                flex-direction: column;
+            }
+            
+            #preview-area {
+                border-left: none;
+                border-top: 1px solid #eee;
+                height: auto;
+            }
+            
+            #files-area {
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- サイドバー -->
+    <aside id="sidebar">
+        <!-- カテゴリーセクション -->
+        <div class="sidebar-section">
+            <h2 class="sidebar-title">カテゴリー</h2>
+            <ul id="category-list" class="category-list">
+                <!-- カテゴリーはJavaScriptで動的に生成 -->
+            </ul>
+        </div>
+        
+        <!-- タグクラウド -->
+        <div class="sidebar-section">
+            <h2 class="sidebar-title">タグ</h2>
+            <ul id="tag-cloud" class="tag-cloud">
+                <!-- タグはJavaScriptで動的に生成 -->
+            </ul>
+        </div>
+    </aside>
+    
+    <!-- メインコンテンツエリア -->
+    <main id="main-content">
+        <!-- ヘッダー -->
+        <header id="header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="search-box">
+                    <input id="search-input" type="text" placeholder="ファイル名で検索...">
+                    <button id="search-btn" type="button">検索</button>
+                </div>
+                <div class="view-switcher">
+                    <button type="button" class="view-btn active" data-view="list">リスト</button>
+                    <button type="button" class="view-btn" data-view="grid">グリッド</button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- コンテンツエリア -->
+        <div id="content-area">
+            <!-- ファイル一覧エリア -->
+            <div id="files-area">
+                <!-- アップロードエリア -->
+                <div id="upload-area" class="upload-area">
+                    <p>HTMLファイルをドラッグ＆ドロップしてアップロード</p>
+                    <p>または</p>
+                    <div class="upload-btn">ファイルを選択</div>
+                    <input type="file" id="file-input" accept=".html,.htm" style="display:none">
+                </div>
+                
+                <!-- ファイル一覧ヘッダー -->
+                <div class="files-header">
+                    <h2>ファイル一覧</h2>
+                    <span id="file-counter" class="file-counter">0件</span>
+                </div>
+                
+                <!-- アクティブフィルター -->
+                <div id="active-filters" class="active-filters">
+                    <!-- フィルタータグはJavaScriptで動的に生成 -->
+                </div>
+                
+                <!-- ファイルリスト（リスト表示） -->
+                <ul id="files-list" class="files-list">
+                    <!-- ファイルアイテムはJavaScriptで動的に生成 -->
+                </ul>
+                
+                <!-- ファイルグリッド（グリッド表示、デフォルトは非表示） -->
+                <ul id="files-grid" class="files-grid" style="display:none;">
+                    <!-- グリッドアイテムはJavaScriptで動的に生成 -->
+                </ul>
+            </div>
+            
+            <!-- プレビューエリア -->
+            <div id="preview-area">
+                <div class="preview-header">
+                    <h2 id="preview-title">プレビュー</h2>
+                    <div>
+                        <button id="open-window-btn" style="display:none; margin-right: 5px;">新規ウィンドウで開く</button>
+                        <button id="edit-file-btn" style="display:none;">編集</button>
+                    </div>
+                </div>
+                <div id="preview-content" class="preview-content">
+                    <div class="no-preview">ファイルを選択するとここにプレビューが表示されます</div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- カテゴリーモーダル -->
+    <div id="category-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="category-modal-title">新規カテゴリー</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="category-name">カテゴリー名</label>
+                    <input type="text" id="category-name" placeholder="カテゴリー名を入力">
+                </div>
+                <div class="form-group">
+                    <label>カテゴリーの色</label>
+                    <div class="color-list">
+                        <div class="color-option selected" style="background-color: #3498db;" data-color="#3498db"></div>
+                        <div class="color-option" style="background-color: #2ecc71;" data-color="#2ecc71"></div>
+                        <div class="color-option" style="background-color: #e74c3c;" data-color="#e74c3c"></div>
+                        <div class="color-option" style="background-color: #f39c12;" data-color="#f39c12"></div>
+                        <div class="color-option" style="background-color: #9b59b6;" data-color="#9b59b6"></div>
+                        <div class="color-option" style="background-color: #1abc9c;" data-color="#1abc9c"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel">キャンセル</button>
+                <button class="btn-save">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- カテゴリー削除確認モーダル -->
+    <div id="confirm-modal" class="modal confirm-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>カテゴリーの削除</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirm-message">このカテゴリーを削除してもよろしいですか？</p>
+                <p>※このカテゴリーを使用しているファイルからもカテゴリー情報が削除されます。</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel">キャンセル</button>
+                <button class="btn-danger" id="confirm-delete-btn">削除する</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ファイル編集モーダル -->
+    <div id="file-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="file-modal-title">ファイル情報</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="file-name">ファイル名</label>
+                    <input type="text" id="file-name" placeholder="ファイル名">
+                </div>
+                <div class="form-group">
+                    <label for="file-category">カテゴリー</label>
+                    <select id="file-category">
+                        <option value="">カテゴリーなし</option>
+                        <!-- カテゴリーオプションはJavaScriptで動的に生成 -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>タグ</label>
+                    <div class="tag-input-container">
+                        <div id="tag-badges">
+                            <!-- タグバッジはJavaScriptで動的に生成 -->
+                        </div>
+                        <input type="text" id="tag-input" class="tag-input" placeholder="タグを追加">
+                    </div>
+                    <small>カンマまたはEnterキーで区切ります</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel">キャンセル</button>
+                <button class="btn-save">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 新規カテゴリー追加ボタン -->
+    <div id="add-category-btn" class="action-btn">+</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // データ構造
+            let files = [];         // ファイル配列
+            let categories = [];    // カテゴリー配列
+            let allTags = new Set(); // 全タグのセット
+            let activeFilters = {   // アクティブなフィルター
+                category: null,
+                tag: null,
+                search: ''
+            };
+            let currentFileId = null;     // 現在選択中のファイルID
+            let currentCategoryName = null; // 現在編集/削除中のカテゴリー名
+            let currentView = 'list';     // 現在のビュー（list or grid）
+            let isEditMode = false;       // カテゴリーモーダルの編集モードフラグ
+            
+            // DOM要素の取得
+            const uploadArea = document.getElementById('upload-area');
+            const fileInput = document.getElementById('file-input');
+            const searchInput = document.getElementById('search-input');
+            const searchBtn = document.getElementById('search-btn');
+            const viewButtons = document.querySelectorAll('.view-btn');
+            const filesList = document.getElementById('files-list');
+            const filesGrid = document.getElementById('files-grid');
+            const fileCounter = document.getElementById('file-counter');
+            const activeFiltersContainer = document.getElementById('active-filters');
+            const categoryList = document.getElementById('category-list');
+            const tagCloud = document.getElementById('tag-cloud');
+            const previewTitle = document.getElementById('preview-title');
+            const previewContent = document.getElementById('preview-content');
+            const editFileBtn = document.getElementById('edit-file-btn');
+            const openWindowBtn = document.getElementById('open-window-btn');
+            
+            // モーダル関連の要素
+            const categoryModal = document.getElementById('category-modal');
+            const categoryModalTitle = document.getElementById('category-modal-title');
+            const confirmModal = document.getElementById('confirm-modal');
+            const confirmMessage = document.getElementById('confirm-message');
+            const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+            const fileModal = document.getElementById('file-modal');
+            const addCategoryBtn = document.getElementById('add-category-btn');
+            const categoryName = document.getElementById('category-name');
+            const colorOptions = document.querySelectorAll('.color-option');
+            const fileName = document.getElementById('file-name');
+            const fileCategory = document.getElementById('file-category');
+            const tagInput = document.getElementById('tag-input');
+            const tagBadges = document.getElementById('tag-badges');
+            const fileModalTitle = document.getElementById('file-modal-title');
+            
+            // ローカルストレージから読み込み
+            loadFromLocalStorage();
+            
+            // 初期表示
+            renderCategories();
+            renderTags();
+            renderFiles();
+            updateFileCounter();
+            
+            // ビュー切り替え（リスト/グリッド）
+            viewButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    viewButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    currentView = this.dataset.view;
+                    filesList.style.display = currentView === 'list' ? 'block' : 'none';
+                    filesGrid.style.display = currentView === 'grid' ? 'grid' : 'none';
+                });
+            });
+            
+            // ドラッグ＆ドロップ処理
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('drag-over');
+            });
+            
+            uploadArea.addEventListener('dragleave', function() {
+                this.classList.remove('drag-over');
+            });
+            
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    processFile(files[0]);
+                }
+            });
+            
+            // ファイル選択ボタン
+            uploadArea.querySelector('.upload-btn').addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    processFile(this.files[0]);
+                    this.value = ''; // リセット
+                }
+            });
+            
+            // ファイル処理
+            function processFile(file) {
+                if (!file.name.endsWith('.html') && !file.name.endsWith('.htm')) {
+                    alert('HTMLファイルを選択してください。');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const fileId = generateId();
+                    const newFile = {
+                        id: fileId,
+                        name: file.name,
+                        content: e.target.result,
+                        category: '',
+                        tags: [],
+                        dateAdded: new Date(),
+                        lastModified: new Date()
+                    };
+                    
+                    files.push(newFile);
+                    saveToLocalStorage();
+                    renderFiles();
+                    updateFileCounter();
+                    
+                    // ファイル追加後に編集モーダルを表示
+                    openFileModal(fileId);
+                };
+                reader.readAsText(file);
+            }
+            
+            // 検索処理
+            searchBtn.addEventListener('click', function() {
+                const searchText = searchInput.value.trim().toLowerCase();
+                activeFilters.search = searchText;
+                renderActiveFilters();
+                renderFiles();
+            });
+            
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchBtn.click();
+                }
+            });
+            
+            // カテゴリーモーダル - 追加モード
+            addCategoryBtn.addEventListener('click', function() {
+                openCategoryModal();
+            });
+            
+            // カテゴリーモーダルを開く（追加/編集）
+            function openCategoryModal(categoryToEdit = null) {
+                isEditMode = !!categoryToEdit;
+                categoryModalTitle.textContent = isEditMode ? 'カテゴリーの編集' : '新規カテゴリー';
+                
+                if (isEditMode && categoryToEdit) {
+                    currentCategoryName = categoryToEdit.name;
+                    categoryName.value = categoryToEdit.name;
+                    
+                    // 色の選択
+                    colorOptions.forEach(option => {
+                        option.classList.remove('selected');
+                        if (option.dataset.color === categoryToEdit.color) {
+                            option.classList.add('selected');
+                        }
+                    });
+                } else {
+                    currentCategoryName = null;
+                    categoryName.value = '';
+                    colorOptions.forEach(option => option.classList.remove('selected'));
+                    colorOptions[0].classList.add('selected');
+                }
+                
+                openModal(categoryModal);
+            }
+            
+            // カテゴリー削除確認モーダルを開く
+            function openConfirmModal(categoryToDelete) {
+                currentCategoryName = categoryToDelete.name;
+                const fileCount = files.filter(file => file.category === categoryToDelete.name).length;
+                
+                confirmMessage.textContent = `「${categoryToDelete.name}」カテゴリーを削除してもよろしいですか？`;
+                confirmMessage.innerHTML += fileCount > 0 ? 
+                    `<br>（このカテゴリーを使用している${fileCount}件のファイルも影響を受けます）` : '';
+                
+                openModal(confirmModal);
+            }
+            
+            // 色選択処理
+            colorOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    colorOptions.forEach(opt => opt.classList.remove('selected'));
+                    this.classList.add('selected');
+                });
+            });
+            
+            // カテゴリー保存処理
+            categoryModal.querySelector('.btn-save').addEventListener('click', function() {
+                const name = categoryName.value.trim();
+                if (!name) {
+                    alert('カテゴリー名を入力してください。');
+                    return;
+                }
+                
+                // 既存カテゴリーの重複チェック（編集モード以外）
+                if (!isEditMode && categories.some(cat => cat.name === name)) {
+                    alert('既に同名のカテゴリーが存在します。');
+                    return;
+                }
+                
+                const selectedColor = document.querySelector('.color-option.selected');
+                const color = selectedColor ? selectedColor.dataset.color : '#3498db';
+                
+                if (isEditMode) {
+                    // カテゴリー編集
+                    const categoryIndex = categories.findIndex(cat => cat.name === currentCategoryName);
+                    if (categoryIndex !== -1) {
+                        const oldName = categories[categoryIndex].name;
+                        categories[categoryIndex].name = name;
+                        categories[categoryIndex].color = color;
+                        
+                        // 関連ファイルのカテゴリー名を更新
+                        files.forEach(file => {
+                            if (file.category === oldName) {
+                                file.category = name;
+                            }
+                        });
+                    }
+                } else {
+                    // 新規カテゴリー追加
+                    categories.push({
+                        name: name,
+                        color: color
+                    });
+                }
+                
+                saveToLocalStorage();
+                renderCategories();
+                renderFiles();
+                updateFileCategoryOptions();
+                closeModal(categoryModal);
+            });
+            
+            // カテゴリー削除処理
+            confirmDeleteBtn.addEventListener('click', function() {
+                if (currentCategoryName) {
+                    const categoryIndex = categories.findIndex(cat => cat.name === currentCategoryName);
+                    if (categoryIndex !== -1) {
+                        // カテゴリーの削除
+                        categories.splice(categoryIndex, 1);
+                        
+                        // 関連ファイルからカテゴリーを削除
+                        files.forEach(file => {
+                            if (file.category === currentCategoryName) {
+                                file.category = '';
+                            }
+                        });
+                        
+                        saveToLocalStorage();
+                        renderCategories();
+                        renderFiles();
+                        updateFileCategoryOptions();
+                        
+                        // フィルターがこのカテゴリーを使用していた場合はクリア
+                        if (activeFilters.category === currentCategoryName) {
+                            activeFilters.category = null;
+                            renderActiveFilters();
+                        }
+                        
+                        closeModal(confirmModal);
+                    }
+                }
+            });
+            
+            // キャンセルボタン処理
+            document.querySelectorAll('.btn-cancel, .modal-close').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const modal = this.closest('.modal');
+                    closeModal(modal);
+                });
+            });
+            
+            // タグ入力処理
+            tagInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    const tag = this.value.trim();
+                    addTag(tag);
+                }
+            });
+            
+            // タグバッジ削除処理
+            function setupTagBadgesRemoval() {
+                document.querySelectorAll('#tag-badges .tag-badge button').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        this.parentElement.remove();
+                    });
+                });
+            }
+            
+            // タグを追加
+            function addTag(tag) {
+                if (!tag) return;
+                
+                // 重複チェック
+                const existingTags = Array.from(tagBadges.querySelectorAll('.tag-badge')).map(
+                    badge => badge.textContent.trim().slice(0, -1) // ×ボタンのテキストを除去
+                );
+                
+                if (!existingTags.includes(tag)) {
+                    const badge = document.createElement('div');
+                    badge.className = 'tag-badge';
+                    badge.innerHTML = `${tag}<button type="button">&times;</button>`;
+                    tagBadges.insertBefore(badge, tagInput);
+                    
+                    // 削除ボタンのイベント設定
+                    badge.querySelector('button').addEventListener('click', function() {
+                        badge.remove();
+                    });
+                }
+                
+                tagInput.value = '';
+            }
+            
+            // ファイル編集モーダル
+            function openFileModal(fileId) {
+                const file = files.find(f => f.id === fileId);
+                if (!file) return;
+                
+                currentFileId = fileId;
+                fileModalTitle.textContent = '「' + file.name + '」の編集';
+                fileName.value = file.name;
+                
+                // カテゴリーの設定
+                fileCategory.value = file.category || '';
+                
+                // タグの設定
+                tagBadges.innerHTML = '';
+                file.tags.forEach(tag => {
+                    const badge = document.createElement('div');
+                    badge.className = 'tag-badge';
+                    badge.innerHTML = `${tag}<button type="button">&times;</button>`;
+                    tagBadges.appendChild(badge);
+                });
+                tagBadges.appendChild(tagInput);
+                
+                setupTagBadgesRemoval();
+                openModal(fileModal);
+            }
+            
+            // ファイル情報の保存
+            fileModal.querySelector('.btn-save').addEventListener('click', function() {
+                const file = files.find(f => f.id === currentFileId);
+                if (!file) return;
+                
+                // 入力値の取得
+                const newName = fileName.value.trim();
+                if (!newName) {
+                    alert('ファイル名を入力してください。');
+                    return;
+                }
+                
+                // ファイル拡張子の確保
+                const extension = file.name.split('.').pop();
+                file.name = newName.endsWith('.' + extension) ? newName : newName + '.' + extension;
+                
+                file.category = fileCategory.value;
+                
+                // タグの取得
+                file.tags = Array.from(tagBadges.querySelectorAll('.tag-badge')).map(
+                    badge => badge.textContent.trim().slice(0, -1) // ×ボタンのテキストを除去
+                );
+                
+                file.lastModified = new Date();
+                
+                // タグの更新
+                updateAllTags();
+                
+                saveToLocalStorage();
+                renderFiles();
+                renderTags();
+                
+                if (file.id === currentFileId) {
+                    displayFilePreview(file);
+                }
+                
+                closeModal(fileModal);
+            });
+            
+            // 編集ボタンのイベント
+            editFileBtn.addEventListener('click', function() {
+                if (currentFileId) {
+                    openFileModal(currentFileId);
+                }
+            });
+
+            // 新規ウィンドウで開くボタンのイベント
+            openWindowBtn.addEventListener('click', function() {
+                if (currentFileId) {
+                    openFileInNewWindow(currentFileId);
+                }
+            });
+
+            // プレビューエリアのダブルクリックイベント
+            previewContent.addEventListener('dblclick', function() {
+                if (currentFileId) {
+                    openFileInNewWindow(currentFileId);
+                }
+            });
+
+            // 新規ウィンドウでファイルを開く関数
+            function openFileInNewWindow(fileId) {
+                const file = files.find(f => f.id === fileId);
+                if (!file) return;
+                
+                const newWindow = window.open('', file.name, 'width=800,height=600');
+                newWindow.document.write(file.content);
+                newWindow.document.close();
+            }
+            
+            // ファイル一覧の表示
+            function renderFiles() {
+                // フィルタリングされたファイル配列
+                const filteredFiles = files.filter(file => {
+                    // カテゴリーフィルター
+                    if (activeFilters.category && file.category !== activeFilters.category) {
+                        return false;
+                    }
+                    
+                    // タグフィルター
+                    if (activeFilters.tag && !file.tags.includes(activeFilters.tag)) {
+                        return false;
+                    }
+                    
+                    // 検索フィルター
+                    if (activeFilters.search && !file.name.toLowerCase().includes(activeFilters.search.toLowerCase())) {
+                        return false;
+                    }
+                    
+                    return true;
+                });
+                
+                // ファイル一覧（リスト表示）
+                filesList.innerHTML = '';
+                filteredFiles.forEach(file => {
+                    const li = document.createElement('li');
+                    li.className = 'file-item';
+                    li.innerHTML = `
+                        <a href="#" data-id="${file.id}">
+                            <div class="file-icon">HTML</div>
+                            <div class="file-details">
+                                <div class="file-name">${file.name}</div>
+                                <div class="file-meta">
+                                    <span class="file-date">追加日: ${formatDate(file.dateAdded)}</span>
+                                    <div class="file-tags">
+                                        ${file.category ? `<span class="file-tag" style="background-color:${getCategoryColor(file.category)};">${file.category}</span>` : ''}
+                                        ${file.tags.map(tag => `<span class="file-tag">${tag}</span>`).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        <button class="delete-file-btn" data-id="${file.id}">&times;</button>
+                    `;
+                    filesList.appendChild(li);
+                    
+                    // 削除ボタンのイベント設定
+                    li.querySelector('.delete-file-btn').addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const fileId = this.dataset.id;
+                        if (confirm('このファイルを削除してもよろしいですか？')) {
+                            deleteFile(fileId);
+                        }
+                    });
+                    
+                    // クリックイベントの設定
+                    li.querySelector('a').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const fileId = this.dataset.id;
+                        const file = files.find(f => f.id === fileId);
+                        if (file) {
+                            currentFileId = fileId;
+                            displayFilePreview(file);
+                        }
+                    });
+                });
+                
+                // ファイルグリッド（グリッド表示）
+                filesGrid.innerHTML = '';
+                filteredFiles.forEach(file => {
+                    const li = document.createElement('li');
+                    li.className = 'grid-item';
+                    li.innerHTML = `
+                        <a href="#" data-id="${file.id}">
+                            <div class="grid-icon">HTML</div>
+                            <div class="grid-details">
+                                <div class="grid-name">${file.name}</div>
+                                <div class="grid-meta">
+                                    ${file.category ? `<div class="grid-category" style="color:${getCategoryColor(file.category)};">${file.category}</div>` : ''}
+                                    <div class="grid-tags">
+                                        ${file.tags.slice(0, 2).map(tag => `<span class="file-tag">${tag}</span>`).join('')}
+                                        ${file.tags.length > 2 ? `<span class="file-tag">+${file.tags.length - 2}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        <button class="delete-file-btn" data-id="${file.id}" style="position:absolute;top:5px;right:5px;">&times;</button>
+                    `;
+                    filesGrid.appendChild(li);
+                    
+                    // 削除ボタンのイベント設定
+                    li.querySelector('.delete-file-btn').addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const fileId = this.dataset.id;
+                        if (confirm('このファイルを削除してもよろしいですか？')) {
+                            deleteFile(fileId);
+                        }
+                    });
+                    
+                    // クリックイベントの設定
+                    li.querySelector('a').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const fileId = this.dataset.id;
+                        const file = files.find(f => f.id === fileId);
+                        if (file) {
+                            currentFileId = fileId;
+                            displayFilePreview(file);
+                        }
+                    });
+                });
+                
+                // ファイルカウンターの更新
+                updateFileCounter();
+            }
+            
+            // ファイル削除
+            function deleteFile(fileId) {
+                const index = files.findIndex(f => f.id === fileId);
+                if (index !== -1) {
+                    files.splice(index, 1);
+                    saveToLocalStorage();
+                    renderFiles();
+                    updateAllTags();
+                    renderTags();
+                    updateFileCounter();
+                    
+                    // 表示中のファイルが削除された場合はプレビューをクリア
+                    if (fileId === currentFileId) {
+                        currentFileId = null;
+                        previewTitle.textContent = 'プレビュー';
+                        previewContent.innerHTML = '<div class="no-preview">ファイルを選択するとここにプレビューが表示されます</div>';
+                        editFileBtn.style.display = 'none';
+                        openWindowBtn.style.display = 'none';
+                        previewContent.classList.remove('has-preview');
+                    }
+                }
+            }
+            
+            // ファイルプレビュー表示
+            function displayFilePreview(file) {
+                previewTitle.textContent = '「' + file.name + '」のプレビュー';
+                previewContent.innerHTML = file.content;
+                previewContent.classList.add('has-preview');
+                editFileBtn.style.display = 'block';
+                openWindowBtn.style.display = 'block';
+            }
+            
+            // カテゴリー一覧の表示
+            function renderCategories() {
+                categoryList.innerHTML = '';
+                
+                // 「すべて」のオプション
+                const allLi = document.createElement('li');
+                allLi.innerHTML = `
+                    <span>
+                        <span class="category-color" style="background-color: #ccc;"></span>
+                        すべて
+                    </span>
+                `;
+                allLi.addEventListener('click', function() {
+                    activeFilters.category = null;
+                    renderActiveFilters();
+                    renderFiles();
+                });
+                categoryList.appendChild(allLi);
+                
+                // カテゴリー一覧
+                categories.forEach(category => {
+                    const count = files.filter(file => file.category === category.name).length;
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>
+                            <span class="category-color" style="background-color: ${category.color};"></span>
+                            ${category.name} (${count})
+                        </span>
+                        <div class="category-actions">
+                            <button class="category-action-btn edit-category" title="編集">✎</button>
+                            <button class="category-action-btn delete-category" title="削除">×</button>
+                        </div>
+                    `;
+                    
+                    // カテゴリー名クリックのイベント設定
+                    li.querySelector('span').addEventListener('click', function() {
+                        activeFilters.category = category.name;
+                        renderActiveFilters();
+                        renderFiles();
+                    });
+                    
+                    // カテゴリー編集ボタンのイベント設定
+                    li.querySelector('.edit-category').addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        openCategoryModal(category);
+                    });
+                    
+                    // カテゴリー削除ボタンのイベント設定
+                    li.querySelector('.delete-category').addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        openConfirmModal(category);
+                    });
+                    
+                    categoryList.appendChild(li);
+                });
+            }
+            
+            // タグクラウドの表示
+            function renderTags() {
+                tagCloud.innerHTML = '';
+                
+                // タグのソート（使用頻度順）
+                const tagCounts = {};
+                allTags.forEach(tag => {
+                    tagCounts[tag] = files.filter(file => file.tags.includes(tag)).length;
+                });
+                
+                const sortedTags = Array.from(allTags).sort((a, b) => tagCounts[b] - tagCounts[a]);
+                
+                sortedTags.forEach(tag => {
+                    const count = tagCounts[tag];
+                    if (count > 0) {
+                        const li = document.createElement('li');
+                        li.textContent = tag;
+                        li.addEventListener('click', function() {
+                            activeFilters.tag = tag;
+                            renderActiveFilters();
+                            renderFiles();
+                        });
+                        tagCloud.appendChild(li);
+                    }
+                });
+                
+                // タグがない場合のメッセージ
+                if (tagCloud.children.length === 0) {
+                    const li = document.createElement('li');
+                    li.textContent = 'タグなし';
+                    li.style.backgroundColor = '#ccc';
+                    tagCloud.appendChild(li);
+                }
+            }
+            
+            // アクティブフィルターの表示
+            function renderActiveFilters() {
+                activeFiltersContainer.innerHTML = '';
+                
+                if (activeFilters.category) {
+                    const filterTag = document.createElement('div');
+                    filterTag.className = 'filter-tag';
+                    filterTag.innerHTML = `
+                        カテゴリー: ${activeFilters.category}
+                        <button data-type="category">&times;</button>
+                    `;
+                    activeFiltersContainer.appendChild(filterTag);
+                    
+                    filterTag.querySelector('button').addEventListener('click', function() {
+                        activeFilters.category = null;
+                        renderActiveFilters();
+                        renderFiles();
+                    });
+                }
+                
+                if (activeFilters.tag) {
+                    const filterTag = document.createElement('div');
+                    filterTag.className = 'filter-tag';
+                    filterTag.innerHTML = `
+                        タグ: ${activeFilters.tag}
+                        <button data-type="tag">&times;</button>
+                    `;
+                    activeFiltersContainer.appendChild(filterTag);
+                    
+                    filterTag.querySelector('button').addEventListener('click', function() {
+                        activeFilters.tag = null;
+                        renderActiveFilters();
+                        renderFiles();
+                    });
+                }
+                
+                if (activeFilters.search) {
+                    const filterTag = document.createElement('div');
+                    filterTag.className = 'filter-tag';
+                    filterTag.innerHTML = `
+                        検索: ${activeFilters.search}
+                        <button data-type="search">&times;</button>
+                    `;
+                    activeFiltersContainer.appendChild(filterTag);
+                    
+                    filterTag.querySelector('button').addEventListener('click', function() {
+                        activeFilters.search = '';
+                        searchInput.value = '';
+                        renderActiveFilters();
+                        renderFiles();
+                    });
+                }
+            }
+            
+            // ファイルカテゴリーオプションの更新
+            function updateFileCategoryOptions() {
+                fileCategory.innerHTML = '<option value="">カテゴリーなし</option>';
+                categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.name;
+                    option.textContent = category.name;
+                    fileCategory.appendChild(option);
+                });
+            }
+            
+            // すべてのタグを更新
+            function updateAllTags() {
+                allTags.clear();
+                files.forEach(file => {
+                    file.tags.forEach(tag => allTags.add(tag));
+                });
+            }
+            
+            // ファイルカウンターの更新
+            function updateFileCounter() {
+                const filteredCount = document.querySelectorAll('#files-list .file-item').length;
+                const totalCount = files.length;
+                fileCounter.textContent = filteredCount === totalCount
+                    ? `全${totalCount}件`
+                    : `${filteredCount}件 / 全${totalCount}件`;
+            }
+            
+            // カテゴリー色の取得
+            function getCategoryColor(categoryName) {
+                const category = categories.find(cat => cat.name === categoryName);
+                return category ? category.color : '#ccc';
+            }
+            
+            // ユニークIDの生成
+            function generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substring(2);
+            }
+            
+            // 日付のフォーマット
+            function formatDate(date) {
+                const d = new Date(date);
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            }
+            
+            // モーダルを開く
+            function openModal(modal) {
+                modal.classList.add('active');
+            }
+            
+            // モーダルを閉じる
+            function closeModal(modal) {
+                modal.classList.remove('active');
+            }
+            
+            // LocalStorageに保存
+            function saveToLocalStorage() {
+                try {
+                    localStorage.setItem('dashboard_files', JSON.stringify(files));
+                    localStorage.setItem('dashboard_categories', JSON.stringify(categories));
+                    
+                    // 全タグの保存
+                    localStorage.setItem('dashboard_tags', JSON.stringify(Array.from(allTags)));
+                } catch (e) {
+                    console.error('LocalStorageへの保存に失敗しました:', e);
+                    alert('データの保存に失敗しました。ブラウザのストレージ容量を確認してください。');
+                }
+            }
+            
+            // LocalStorageから読み込み
+            function loadFromLocalStorage() {
+                try {
+                    // ファイルデータの読み込み
+                    const savedFiles = localStorage.getItem('dashboard_files');
+                    if (savedFiles) {
+                        files = JSON.parse(savedFiles);
+                        // 日付の変換
+                        files.forEach(file => {
+                            file.dateAdded = new Date(file.dateAdded);
+                            file.lastModified = new Date(file.lastModified);
+                        });
+                    }
+                    
+                    // カテゴリーデータの読み込み
+                    const savedCategories = localStorage.getItem('dashboard_categories');
+                    if (savedCategories) {
+                        categories = JSON.parse(savedCategories);
+                    } else {
+                        // デフォルトカテゴリー
+                        categories = [
+                            { name: '経済分析', color: '#3498db' },
+                            { name: 'テンプレート', color: '#2ecc71' },
+                            { name: 'デモ', color: '#e74c3c' },
+                            { name: 'その他', color: '#f39c12' }
+                        ];
+                    }
+                    
+                    // タグデータの読み込み
+                    const savedTags = localStorage.getItem('dashboard_tags');
+                    if (savedTags) {
+                        allTags = new Set(JSON.parse(savedTags));
+                    }
+                    
+                    // タグの更新（ファイルから全タグを再集計）
+                    updateAllTags();
+                    
+                    // カテゴリーオプションの更新
+                    updateFileCategoryOptions();
+                } catch (e) {
+                    console.error('LocalStorageからの読み込みに失敗しました:', e);
+                    alert('データの読み込みに失敗しました。');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

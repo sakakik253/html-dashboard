@@ -1,0 +1,268 @@
+/* 目次連動ダッシュボード拡張スタイル */
+
+/* 基本スタイル上書き - 問題解決のための修正 */
+.preview-content-wrapper iframe {
+    width: 100%;
+    height: 600px;
+    border: none;
+}
+
+.preview-content-wrapper img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* スマートフォン対応の修正 */
+@media (max-width: 768px) {
+    .enhanced-preview {
+        flex-direction: column;
+    }
+    
+    .preview-toc {
+        width: 100%;
+        max-height: 200px;
+    }
+}
+
+/* サイドバーの修正 - スクロール対応 */
+.sidebar {
+    overflow-y: auto;
+}
+
+/* プレビュー表示の拡張 */
+.enhanced-preview {
+    display: flex;
+    height: 100%;
+    gap: 20px;
+}
+
+.preview-toc {
+    width: 250px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    background-color: #f8f9f9;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.preview-toc h3 {
+    font-size: 16px;
+    color: #2c3e50;
+    margin-top: 0;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.preview-toc ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.preview-toc li {
+    margin-bottom: 8px;
+}
+
+.preview-toc a {
+    display: block;
+    padding: 8px 10px;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.2s ease;
+}
+
+.preview-toc a:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+}
+
+.preview-toc a.active {
+    background-color: #3498db;
+    color: white;
+}
+
+.preview-content-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* ファイル情報表示のスタイル */
+.file-info-section {
+    margin-bottom: 20px;
+}
+
+.file-info-section h3 {
+    font-size: 16px;
+    color: #2c3e50;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+}
+
+.info-table th,
+.info-table td {
+    padding: 8px 10px;
+    border: 1px solid #eee;
+    text-align: left;
+}
+
+.info-table th {
+    background-color: #f8f9f9;
+    width: 35%;
+    font-weight: normal;
+}
+
+/* ローディング表示 */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 取り込みファイルのタグ表示 */
+.file-tag.file-tag-html {
+    background-color: #3498db;
+    color: white;
+}
+
+.file-tag.file-tag-slide {
+    background-color: #2ecc71;
+    color: white;
+}
+
+.file-tag.file-tag-toc {
+    background-color: #9b59b6;
+    color: white;
+}
+
+/* 目次アイテムのスタイル */
+#toc-menu {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+#toc-menu li {
+    padding: 8px 10px;
+    margin-bottom: 5px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+#toc-menu li:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#toc-menu li.active {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+#toc-menu li i {
+    margin-right: 10px;
+    width: 16px;
+    color: #f2c53d;
+}
+
+#toc-menu li span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 目次セクションのタイトル */
+.sidebar-title.toc-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidebar-title.toc-title i {
+    font-size: 16px;
+    color: #f2c53d;
+}
+
+/* ファイル情報モーダルのスタイル */
+#file-info-modal .modal-content {
+    max-width: 700px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 992px) {
+    .enhanced-preview {
+        flex-direction: column;
+    }
+    
+    .preview-toc {
+        width: 100%;
+        max-height: 200px;
+    }
+}
+
+/* 取り込み状態メッセージ */
+.import-status {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.import-status.error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.import-status button {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+/* ドラッグオーバー時の強調表示 */
+.upload-area.drag-over {
+    background-color: rgba(52, 152, 219, 0.2);
+    border-color: #3498db;
+}
